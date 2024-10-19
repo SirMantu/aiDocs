@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 from tkinter import filedialog
 from tkinter import messagebox
+import openai  # Nutzung des OpenAI SDK
 
 # Default configuration file path
 config_file = "config.json"
@@ -104,12 +105,12 @@ def load_data():
         text_box.insert("1.0", data.get("notizen", ""))
         diagnose_box.delete("1.0", tk.END)
         diagnose_box.insert("1.0", data.get("diagnose", "Diagnose Notizen hier einfügen"))
-        diagnose_box.config(fg="grey")  # Setze graue Schrift für Diagnose-Box
+        diagnose_box.config(fg="grey")
         chatgpt_box.delete("1.0", tk.END)
-        chatgpt_box.insert("1.0", data.get("chatgpt_ausgabe", "Ausgabe von ChatGPD"))
-        chatgpt_box.config(fg="grey")  # Setze graue Schrift für ChatGPT-Box
+        chatgpt_box.insert("1.0", data.get("chatgpt_ausgabe", "Ausgabe von ChatGPT"))
+        chatgpt_box.config(fg="grey")
 
-# Collect diagnosis input
+# Collect diagnosis input and send to ChatGPT
 def collect_input_for_diagnosis():
     arztbrief = arztbrief_box.get("1.0", tk.END).strip()
     diagnose = diagnose_box.get("1.0", tk.END).strip()
@@ -118,14 +119,42 @@ def collect_input_for_diagnosis():
     geschlecht = geschlecht_var.get()
     arzt = arzt_entry.get()
     
-    result = (
+    # Erzeuge den Eingabetext
+    input_text = (
         f"{arztbrief}\n{diagnose}\n"
         f"Informationen über den Patient:\n"
         f"Geschlecht: {geschlecht}\nVorname: {vorname}\nNachname: {nachname}\n"
         f"Behandelnder Arzt: {arzt}"
     )
+    
     chatgpt_box.delete("1.0", tk.END)
-    chatgpt_box.insert("1.0", result)
+    chatgpt_box.insert("1.0", input_text)
+
+    # ChatGPT API Token laden
+    api_token = load_token()
+    if not api_token:
+        messagebox.showerror("Fehler", "API-Token wurde nicht gefunden. Bitte füge den API-Token hinzu.")
+        return
+
+    # OpenAI API initialisieren
+    openai.api_key = api_token
+
+    try:
+        # Anfrage an die GPT API senden (neue Schnittstelle)
+        response = openai.completions.create(
+            model="gpt-4",  # Verwende das gewünschte Modell
+            prompt=input_text,
+            max_tokens=1000,
+            temperature=0.7
+        )
+        
+        # ChatGPT-Antwort anzeigen
+        chatgpt_reply = response['choices'][0]['text'].strip()
+        text_box.delete("1.0", tk.END)
+        text_box.insert("1.0", chatgpt_reply)
+
+    except Exception as e:
+        messagebox.showerror("Fehler", f"Fehler bei der API-Anfrage: {e}")
 
 # Handle focus events for placeholder text in Text widgets
 def on_focus_in(event, widget, default_text):
@@ -165,21 +194,22 @@ diagnose_box.bind("<FocusOut>", lambda event: on_focus_out(event, diagnose_box, 
 # Textbox für ChatGPT-Ausgabe mit grauem Platzhaltertext
 chatgpt_box = tk.Text(root, height=5, width=80, fg="grey")
 chatgpt_box.grid(row=3, column=0, columnspan=2)
-chatgpt_box.insert("1.0", "Ausgabe von ChatGPD")
-chatgpt_box.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_box, "Ausgabe von ChatGPD"))
-chatgpt_box.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_box, "Ausgabe von ChatGPD"))
+chatgpt_box.insert("1.0", "Ausgabe von ChatGPT")
+chatgpt_box.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_box, "Ausgabe von ChatGPT"))
+chatgpt_box.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_box, "Ausgabe von ChatGPT"))
 
 # Vorname
 tk.Label(root, text="Vorname").grid(row=4, column=0)
 vorname_entry = tk.Entry(root)
-vorname_entry.grid(row=4, column=0, columnspan=2)
+vorname_entry.grid(row=4, column=1)
 
 # Nachname
 tk.Label(root, text="Nachname").grid(row=5, column=0)
 nachname_entry = tk.Entry(root)
-nachname_entry.grid(row=5, column=0, columnspan=2)
+nachname_entry.grid(row=5, column=1)
 
-# Geschlecht
+# Geschlecht als Radiobuttons
+geschlecht_var = tk.StringVar(value="Frau")
 geschlecht_frame = tk.LabelFrame(root, text="Geschlecht")
 geschlecht_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=5)
 geschlecht_var = tk.StringVar(value="Frau")
@@ -187,36 +217,34 @@ tk.Radiobutton(geschlecht_frame, text="Frau", variable=geschlecht_var, value="Fr
 tk.Radiobutton(geschlecht_frame, text="Mann", variable=geschlecht_var, value="Mann").pack(side="left", padx=10)
 tk.Radiobutton(geschlecht_frame, text="Divers", variable=geschlecht_var, value="Divers").pack(side="left", padx=10)
 
-# Behandelnder Arzt
+
+# Arztname
 tk.Label(root, text="Behandelnder Arzt").grid(row=7, column=0)
 arzt_entry = tk.Entry(root)
-arzt_entry.grid(row=7, column=0, columnspan=2)
+arzt_entry.grid(row=7, column=1)
 
-# API-Token Eingabe
-tk.Label(root, text="ChatGPT API-Token").grid(row=8, column=0)
-token_entry = tk.Entry(root)
-token_entry.grid(row=8, column=0, columnspan=2)
-token_entry.insert(0, load_token())  # Load saved token
-
-# Speichern-Button für API-Token
-save_token_button = tk.Button(root, text="API-Token speichern", command=save_token)
-save_token_button.grid(row=9, column=0, columnspan=2)
-
-# Arbeitsordner auswählen Button
-select_directory_button = tk.Button(root, text="Arbeitsordner auswählen", command=select_working_directory)
-select_directory_button.grid(row=10, column=0, columnspan=2)
-
-# Speichern-Button
+# Save Data Button
 save_button = tk.Button(root, text="Daten speichern", command=save_data)
-save_button.grid(row=11, column=0)
+save_button.grid(row=8, column=0)
 
-# Laden-Button
+# Load Data Button
 load_button = tk.Button(root, text="Daten laden", command=load_data)
-load_button.grid(row=11, column=1)
+load_button.grid(row=8, column=1)
 
-# Diagnose-Button
-diagnose_button = tk.Button(root, text="Diagnose", command=collect_input_for_diagnosis)
-diagnose_button.grid(row=11, column=2)
+# Button zum Senden an ChatGPT
+send_button = tk.Button(root, text="An ChatGPT senden", command=collect_input_for_diagnosis)
+send_button.grid(row=9, column=0)
 
-# Hauptschleife starten
+# Arbeitsordner auswählen
+select_dir_button = tk.Button(root, text="Arbeitsordner auswählen", command=select_working_directory)
+select_dir_button.grid(row=9, column=1)
+
+# ChatGPT Token speichern
+token_label = tk.Label(root, text="API-Token")
+token_label.grid(row=10, column=0)
+token_entry = tk.Entry(root)
+token_entry.grid(row=10, column=1)
+save_token_button = tk.Button(root, text="API-Token speichern", command=save_token)
+save_token_button.grid(row=10, column=2)
+
 root.mainloop()
