@@ -170,16 +170,15 @@ tk.Label(root, text="Nachname").grid(row=5, column=0)
 nachname_entry = tk.Entry(root)
 nachname_entry.grid(row=5, column=0, columnspan=2)
 
-# Geschlecht
-tk.Label(root, text="Geschlecht").grid(row=6, column=0)
+# Geschlecht als LabelFrame für eine bessere Gruppierung
+geschlecht_frame = tk.LabelFrame(root, text="Geschlecht")
+geschlecht_frame.grid(row=6, column=0, columnspan=2, pady=10)
+
 geschlecht_var = tk.StringVar(value="Frau")
-tk.Radiobutton(root, text="Frau", variable=geschlecht_var, value="Frau").grid(row=6, column=1, padx=10)
-tk.Radiobutton(root, text="Mann", variable=geschlecht_var, value="Mann").grid(row=6, column=2, padx=10)
-tk.Radiobutton(root, text="Divers", variable=geschlecht_var, value="Divers").grid(row=6, column=3, padx=10)
+tk.Radiobutton(geschlecht_frame, text="Frau", variable=geschlecht_var, value="Frau").pack(side=tk.LEFT, padx=10)
+tk.Radiobutton(geschlecht_frame, text="Mann", variable=geschlecht_var, value="Mann").pack(side=tk.LEFT, padx=10)
+tk.Radiobutton(geschlecht_frame, text="Divers", variable=geschlecht_var, value="Divers").pack(side=tk.LEFT, padx=10)
 
-
-for x in items:
-    tk.Radiobutton(root, text=x, variable=var, value=x, command=cb).grid()
 # Behandelnder Arzt
 tk.Label(root, text="Behandelnder Arzt").grid(row=7, column=0)
 arzt_entry = tk.Entry(root)
