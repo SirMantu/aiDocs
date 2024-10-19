@@ -2,39 +2,58 @@ import tkinter as tk
 import json
 import os
 from datetime import datetime
-from tkinter import filedialog, messagebox
+from tkinter import filedialog
+from tkinter import messagebox
 
-# Funktion, um den Arbeitsordner zu speichern
-def save_working_directory(directory):
-    settings = {"working_directory": directory}
-    with open("settings.json", "w") as file:
-        json.dump(settings, file)
+# Default configuration file path
+config_file = "config.json"
 
-# Funktion, um den Arbeitsordner zu laden
-def load_working_directory():
-    if os.path.exists("settings.json"):
-        with open("settings.json", "r") as file:
-            settings = json.load(file)
-            return settings.get("working_directory", default_working_directory())
+# Load configuration data from config.json if it exists
+def load_config():
+    if os.path.exists(config_file):
+        with open(config_file, 'r') as file:
+            return json.load(file)
     else:
-        return default_working_directory()
+        # Set default values if config doesn't exist
+        return {
+            'api_token': '',
+            'default_directory': os.path.expanduser("~/Documents")
+        }
 
-# Standard-Arbeitsordner (My Documents)
-def default_working_directory():
-    return os.path.join(os.path.expanduser("~"), "Documents")
+# Save configuration data to config.json
+def save_config(data):
+    with open(config_file, 'w') as file:
+        json.dump(data, file)
 
-# Funktion, um den Ordner für das Speichern und Laden auszuwählen
+# Save the ChatGPT API token
+def save_token():
+    token = token_entry.get()
+    if not token:
+        messagebox.showerror("Fehler", "API-Token darf nicht leer sein.")
+        return
+    config_data = load_config()
+    config_data['api_token'] = token
+    save_config(config_data)
+    messagebox.showinfo("Erfolg", "API-Token wurde gespeichert.")
+
+# Load API token from configuration file
+def load_token():
+    config_data = load_config()
+    return config_data.get('api_token', "")
+
+# Select working directory for file saving/loading
 def select_working_directory():
-    selected_directory = filedialog.askdirectory(title="Wähle einen Arbeitsordner aus")
-    if selected_directory:
-        save_working_directory(selected_directory)
-        messagebox.showinfo("Erfolg", f"Der Arbeitsordner wurde auf {selected_directory} gesetzt.")
-    else:
-        messagebox.showwarning("Warnung", "Es wurde kein Ordner ausgewählt.")
+    global default_directory
+    directory = filedialog.askdirectory(initialdir=default_directory, title="Arbeitsordner auswählen")
+    if directory:
+        default_directory = directory
+        config_data = load_config()
+        config_data['default_directory'] = default_directory
+        save_config(config_data)
+        messagebox.showinfo("Erfolg", f"Arbeitsordner wurde auf {default_directory} gesetzt.")
 
-# Funktion zum Speichern der Daten
+# Save patient data to JSON file
 def save_data():
-    working_directory = load_working_directory()
     vorname = vorname_entry.get()
     nachname = nachname_entry.get()
     
@@ -44,7 +63,7 @@ def save_data():
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{vorname}_{nachname}_{timestamp}.json"
-    filepath = os.path.join(working_directory, filename)
+    filepath = os.path.join(default_directory, filename)
     
     data = {
         "vorname": vorname,
@@ -61,12 +80,11 @@ def save_data():
         json.dump(data, file)
     print(f"Daten gespeichert in: {filepath}")
 
-# Funktion zum Laden der Daten
+# Load patient data from JSON file
 def load_data():
-    working_directory = load_working_directory()
     file_path = filedialog.askopenfilename(
-        initialdir=working_directory,
         title="Wähle eine Datei aus",
+        initialdir=default_directory,
         filetypes=[("JSON Dateien", "*.json")]
     )
     
@@ -91,51 +109,42 @@ def load_data():
         chatgpt_box.insert("1.0", data.get("chatgpt_ausgabe", "Ausgabe von ChatGPD"))
         chatgpt_box.config(fg="grey")  # Setze graue Schrift für ChatGPT-Box
 
-# Funktion, um Platzhaltertext bei Fokus zu entfernen
+# Collect diagnosis input
+def collect_input_for_diagnosis():
+    arztbrief = arztbrief_box.get("1.0", tk.END).strip()
+    diagnose = diagnose_box.get("1.0", tk.END).strip()
+    vorname = vorname_entry.get()
+    nachname = nachname_entry.get()
+    geschlecht = geschlecht_var.get()
+    arzt = arzt_entry.get()
+    
+    result = (
+        f"{arztbrief}\n{diagnose}\n"
+        f"Informationen über den Patient:\n"
+        f"Geschlecht: {geschlecht}\nVorname: {vorname}\nNachname: {nachname}\n"
+        f"Behandelnder Arzt: {arzt}"
+    )
+    chatgpt_box.delete("1.0", tk.END)
+    chatgpt_box.insert("1.0", result)
+
+# Handle focus events for placeholder text in Text widgets
 def on_focus_in(event, widget, default_text):
     if widget.get("1.0", tk.END).strip() == default_text:
         widget.delete("1.0", tk.END)
         widget.config(fg="black")
 
-# Funktion, um Platzhaltertext bei Fokusverlust wieder einzufügen
 def on_focus_out(event, widget, default_text):
     if not widget.get("1.0", tk.END).strip():
         widget.insert("1.0", default_text)
         widget.config(fg="grey")
 
-# Funktion, um die Diagnoseinformationen zu sammeln und in die ChatGPT-Box zu schreiben
-def collect_input_for_diagnosis():
-    # Texte aus den Textboxen sammeln
-    arztbrief_text = arztbrief_box.get("1.0", tk.END).strip()
-    diagnose_text = diagnose_box.get("1.0", tk.END).strip()
-    
-    # Vorname, Nachname und Geschlecht sammeln
-    vorname = vorname_entry.get().strip()
-    nachname = nachname_entry.get().strip()
-    geschlecht = geschlecht_var.get()
-    
-    # Behandelnder Arzt sammeln
-    arzt_name = arzt_entry.get().strip()
-
-    # String für die Diagnose zusammensetzen
-    diagnose_info = (
-        f"{arztbrief_text}\n\n{diagnose_text}\n\n"
-        f"Informationen über den Patient:\n"
-        f"Geschlecht: {geschlecht}\n"
-        f"Vorname: {vorname}\n"
-        f"Nachname: {nachname}\n\n"
-        f"Behandelnder Arzt: {arzt_name}"
-    )
-    
-    # Den zusammengesetzten Text in die chatgpt_box schreiben
-    chatgpt_box.delete("1.0", tk.END)  # Vorherigen Text löschen
-    chatgpt_box.insert("1.0", diagnose_info)
-    chatgpt_box.config(fg="black")  # Textfarbe schwarz setzen, falls es vorher grau war
-    print(diagnose_info)  # Optional: Zur Kontrolle in der Konsole ausgeben
-
 # Hauptfenster erstellen
 root = tk.Tk()
 root.title("Patienteninformation")
+
+# Load default configuration
+config_data = load_config()
+default_directory = config_data.get('default_directory', os.path.expanduser("~/Documents"))
 
 # Textbox für Arztbrief
 arztbrief_box = tk.Text(root, height=5, width=80)
@@ -170,35 +179,44 @@ tk.Label(root, text="Nachname").grid(row=5, column=0)
 nachname_entry = tk.Entry(root)
 nachname_entry.grid(row=5, column=0, columnspan=2)
 
-# Geschlecht als LabelFrame für eine bessere Gruppierung
+# Geschlecht
 geschlecht_frame = tk.LabelFrame(root, text="Geschlecht")
-geschlecht_frame.grid(row=6, column=0, columnspan=2, pady=10)
-
+geschlecht_frame.grid(row=6, column=0, columnspan=2, padx=10, pady=5)
 geschlecht_var = tk.StringVar(value="Frau")
-tk.Radiobutton(geschlecht_frame, text="Frau", variable=geschlecht_var, value="Frau").pack(side=tk.LEFT, padx=10)
-tk.Radiobutton(geschlecht_frame, text="Mann", variable=geschlecht_var, value="Mann").pack(side=tk.LEFT, padx=10)
-tk.Radiobutton(geschlecht_frame, text="Divers", variable=geschlecht_var, value="Divers").pack(side=tk.LEFT, padx=10)
+tk.Radiobutton(geschlecht_frame, text="Frau", variable=geschlecht_var, value="Frau").pack(side="left", padx=10)
+tk.Radiobutton(geschlecht_frame, text="Mann", variable=geschlecht_var, value="Mann").pack(side="left", padx=10)
+tk.Radiobutton(geschlecht_frame, text="Divers", variable=geschlecht_var, value="Divers").pack(side="left", padx=10)
 
 # Behandelnder Arzt
 tk.Label(root, text="Behandelnder Arzt").grid(row=7, column=0)
 arzt_entry = tk.Entry(root)
 arzt_entry.grid(row=7, column=0, columnspan=2)
 
+# API-Token Eingabe
+tk.Label(root, text="ChatGPT API-Token").grid(row=8, column=0)
+token_entry = tk.Entry(root)
+token_entry.grid(row=8, column=0, columnspan=2)
+token_entry.insert(0, load_token())  # Load saved token
+
+# Speichern-Button für API-Token
+save_token_button = tk.Button(root, text="API-Token speichern", command=save_token)
+save_token_button.grid(row=9, column=0, columnspan=2)
+
+# Arbeitsordner auswählen Button
+select_directory_button = tk.Button(root, text="Arbeitsordner auswählen", command=select_working_directory)
+select_directory_button.grid(row=10, column=0, columnspan=2)
+
 # Speichern-Button
 save_button = tk.Button(root, text="Daten speichern", command=save_data)
-save_button.grid(row=8, column=0)
+save_button.grid(row=11, column=0)
 
 # Laden-Button
 load_button = tk.Button(root, text="Daten laden", command=load_data)
-load_button.grid(row=8, column=1)
+load_button.grid(row=11, column=1)
 
 # Diagnose-Button
 diagnose_button = tk.Button(root, text="Diagnose", command=collect_input_for_diagnosis)
-diagnose_button.grid(row=8, column=2)
-
-# Arbeitsordner-Button
-working_directory_button = tk.Button(root, text="Arbeitsordner auswählen", command=select_working_directory)
-working_directory_button.grid(row=9, column=0)
+diagnose_button.grid(row=11, column=2)
 
 # Hauptschleife starten
 root.mainloop()
