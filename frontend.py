@@ -1,10 +1,40 @@
 import tkinter as tk
 import json
+import os
 from datetime import datetime
-from tkinter import filedialog
+from tkinter import filedialog, messagebox
+
+# Funktion, um den Arbeitsordner zu speichern
+def save_working_directory(directory):
+    settings = {"working_directory": directory}
+    with open("settings.json", "w") as file:
+        json.dump(settings, file)
+
+# Funktion, um den Arbeitsordner zu laden
+def load_working_directory():
+    if os.path.exists("settings.json"):
+        with open("settings.json", "r") as file:
+            settings = json.load(file)
+            return settings.get("working_directory", default_working_directory())
+    else:
+        return default_working_directory()
+
+# Standard-Arbeitsordner (My Documents)
+def default_working_directory():
+    return os.path.join(os.path.expanduser("~"), "Documents")
+
+# Funktion, um den Ordner für das Speichern und Laden auszuwählen
+def select_working_directory():
+    selected_directory = filedialog.askdirectory(title="Wähle einen Arbeitsordner aus")
+    if selected_directory:
+        save_working_directory(selected_directory)
+        messagebox.showinfo("Erfolg", f"Der Arbeitsordner wurde auf {selected_directory} gesetzt.")
+    else:
+        messagebox.showwarning("Warnung", "Es wurde kein Ordner ausgewählt.")
 
 # Funktion zum Speichern der Daten
 def save_data():
+    working_directory = load_working_directory()
     vorname = vorname_entry.get()
     nachname = nachname_entry.get()
     
@@ -14,6 +44,7 @@ def save_data():
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"{vorname}_{nachname}_{timestamp}.json"
+    filepath = os.path.join(working_directory, filename)
     
     data = {
         "vorname": vorname,
@@ -26,13 +57,15 @@ def save_data():
         "chatgpt_ausgabe": chatgpt_box.get("1.0", tk.END)
     }
     
-    with open(filename, 'w') as file:
+    with open(filepath, 'w') as file:
         json.dump(data, file)
-    print(f"Daten gespeichert in: {filename}")
+    print(f"Daten gespeichert in: {filepath}")
 
 # Funktion zum Laden der Daten
 def load_data():
+    working_directory = load_working_directory()
     file_path = filedialog.askopenfilename(
+        initialdir=working_directory,
         title="Wähle eine Datei aus",
         filetypes=[("JSON Dateien", "*.json")]
     )
@@ -144,6 +177,9 @@ tk.Radiobutton(root, text="Frau", variable=geschlecht_var, value="Frau").grid(ro
 tk.Radiobutton(root, text="Mann", variable=geschlecht_var, value="Mann").grid(row=6, column=2, padx=10)
 tk.Radiobutton(root, text="Divers", variable=geschlecht_var, value="Divers").grid(row=6, column=3, padx=10)
 
+
+for x in items:
+    tk.Radiobutton(root, text=x, variable=var, value=x, command=cb).grid()
 # Behandelnder Arzt
 tk.Label(root, text="Behandelnder Arzt").grid(row=7, column=0)
 arzt_entry = tk.Entry(root)
@@ -160,6 +196,10 @@ load_button.grid(row=8, column=1)
 # Diagnose-Button
 diagnose_button = tk.Button(root, text="Diagnose", command=collect_input_for_diagnosis)
 diagnose_button.grid(row=8, column=2)
+
+# Arbeitsordner-Button
+working_directory_button = tk.Button(root, text="Arbeitsordner auswählen", command=select_working_directory)
+working_directory_button.grid(row=9, column=0)
 
 # Hauptschleife starten
 root.mainloop()
