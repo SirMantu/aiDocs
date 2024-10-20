@@ -5,6 +5,7 @@ from datetime import datetime
 from tkinter import filedialog
 from tkinter import messagebox
 import openai  # Nutzung des OpenAI SDK
+import docx  # Verwende python-docx für das Erstellen von Word-Dokumenten
 
 # Default configuration file path
 config_file = "config.json"
@@ -71,10 +72,10 @@ def save_data():
         "nachname": nachname,
         "geschlecht": geschlecht_var.get(),
         "arzt": arzt_entry.get(),
-        "notizen": text_box.get("1.0", tk.END),
+        "notizen": chatgpt_output.get("1.0", tk.END),
         "diagnose": diagnose_box.get("1.0", tk.END),
         "arztbrief": arztbrief_box.get("1.0", tk.END),
-        "chatgpt_ausgabe": chatgpt_box.get("1.0", tk.END)
+        "chatgpt_eingabe": chatgpt_input.get("1.0", tk.END)
     }
     
     with open(filepath, 'w') as file:
@@ -101,14 +102,14 @@ def load_data():
         geschlecht_var.set(data.get("geschlecht", "Frau"))
         arzt_entry.delete(0, tk.END)
         arzt_entry.insert(0, data.get("arzt", ""))
-        text_box.delete("1.0", tk.END)
-        text_box.insert("1.0", data.get("notizen", ""))
+        chatgpt_output.delete("1.0", tk.END)
+        chatgpt_output.insert("1.0", data.get("notizen", ""))
         diagnose_box.delete("1.0", tk.END)
         diagnose_box.insert("1.0", data.get("diagnose", "Diagnose Notizen hier einfügen"))
         diagnose_box.config(fg="grey")
-        chatgpt_box.delete("1.0", tk.END)
-        chatgpt_box.insert("1.0", data.get("chatgpt_ausgabe", "Ausgabe von ChatGPT"))
-        chatgpt_box.config(fg="grey")
+        chatgpt_input.delete("1.0", tk.END)
+        chatgpt_input.insert("1.0", data.get("chatgpt_eingabe", "Ausgabe von ChatGPT"))
+        chatgpt_input.config(fg="grey")
 
 # Collect diagnosis input and send to ChatGPT
 def collect_input_for_diagnosis():
@@ -127,8 +128,8 @@ def collect_input_for_diagnosis():
         f"Behandelnder Arzt: {arzt}"
     )
     
-    chatgpt_box.delete("1.0", tk.END)
-    chatgpt_box.insert("1.0", input_text)
+    chatgpt_input.delete("1.0", tk.END)
+    chatgpt_input.insert("1.0", input_text)
 
     # ChatGPT API Token laden
     api_token = load_token()
@@ -141,17 +142,31 @@ def collect_input_for_diagnosis():
 
     try:
         # Anfrage an die GPT API senden (neue Schnittstelle)
-        response = openai.completions.create(
-            model="gpt-4",  # Verwende das gewünschte Modell
-            prompt=input_text,
-            max_tokens=1000,
-            temperature=0.7
-        )
+        # response = openai.completions.create(
+        #     model="gpt-3.5-turbo-0125",  # Verwende das gewünschte Modell
+        #     prompt=input_text,
+        #     max_tokens=1000,
+        #     temperature=0.7
+        # )
         
         # ChatGPT-Antwort anzeigen
-        chatgpt_reply = response['choices'][0]['text'].strip()
-        text_box.delete("1.0", tk.END)
-        text_box.insert("1.0", chatgpt_reply)
+        # chatgpt_reply = response['choices'][0]['text'].strip()
+        # dummy text 
+        # TODO DELETE after real use of chatgpd token
+        chatgpt_reply = "Arztbrief mit Diagnose. BLABLABLA"
+        chatgpt_output.delete("1.0", tk.END)
+        chatgpt_output.insert("1.0", chatgpt_reply)
+
+        # Antwort in ein Word-Dokument speichern
+        timestamp = datetime.now().strftime("%Y_%m_%d")
+        filename = f"{vorname}_{nachname}_{timestamp}.docx"
+        filepath = os.path.join(default_directory, filename)
+
+        doc = docx.Document()
+        doc.add_heading(f"ChatGPT Diagnose für {vorname} {nachname}", 0)
+        doc.add_paragraph(chatgpt_reply)
+        doc.save(filepath)
+        print(f"Antwort von ChatGPT gespeichert in: {filepath}")
 
     except Exception as e:
         messagebox.showerror("Fehler", f"Fehler bei der API-Anfrage: {e}")
@@ -180,23 +195,26 @@ arztbrief_box = tk.Text(root, height=5, width=80)
 arztbrief_box.grid(row=0, column=0, columnspan=2)
 arztbrief_box.insert("1.0", "Schreibe einen Arztbrief mit den folgenden Diagnose Notizen")
 
-# Textbox für Notizen
-text_box = tk.Text(root, height=10, width=80)
-text_box.grid(row=1, column=0, columnspan=2)
-
 # Textbox für Diagnose mit grauem Platzhaltertext
 diagnose_box = tk.Text(root, height=10, width=80, fg="grey")
-diagnose_box.grid(row=2, column=0, columnspan=2)
+diagnose_box.grid(row=1, column=0, columnspan=2)
 diagnose_box.insert("1.0", "Diagnose Notizen hier einfügen")
 diagnose_box.bind("<FocusIn>", lambda event: on_focus_in(event, diagnose_box, "Diagnose Notizen hier einfügen"))
 diagnose_box.bind("<FocusOut>", lambda event: on_focus_out(event, diagnose_box, "Diagnose Notizen hier einfügen"))
 
-# Textbox für ChatGPT-Ausgabe mit grauem Platzhaltertext
-chatgpt_box = tk.Text(root, height=5, width=80, fg="grey")
-chatgpt_box.grid(row=3, column=0, columnspan=2)
-chatgpt_box.insert("1.0", "Ausgabe von ChatGPT")
-chatgpt_box.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_box, "Ausgabe von ChatGPT"))
-chatgpt_box.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_box, "Ausgabe von ChatGPT"))
+# Textbox für ChatGPT-Eingabe mit grauem Platzhaltertext
+chatgpt_input = tk.Text(root, height=5, width=80, fg="grey")
+chatgpt_input.grid(row=2, column=0, columnspan=2)
+chatgpt_input.insert("1.0", "Ausgabe von ChatGPT")
+chatgpt_input.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_input, "Ausgabe von ChatGPT"))
+chatgpt_input.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_input, "Ausgabe von ChatGPT"))
+
+# Textbox für ChatGPT-Ausgabe
+chatgpt_output = tk.Text(root, height=10, width=80)
+chatgpt_output.grid(row=3, column=0, columnspan=2)
+chatgpt_output.insert("1.0", "Ausgabe von ChatGPT")
+chatgpt_output.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_output, "Ausgabe von ChatGPT"))
+chatgpt_output.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_output, "Ausgabe von ChatGPT"))
 
 # Vorname
 tk.Label(root, text="Vorname").grid(row=4, column=0)
