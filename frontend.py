@@ -37,6 +37,9 @@ def save_token():
     config_data['api_token'] = token
     save_config(config_data)
     messagebox.showinfo("Erfolg", "API-Token wurde gespeichert.")
+    token_entry.delete(0, tk.END)
+    token_entry.insert(0, "API Token verfügbar")
+    token_entry.config(fg="grey")
 
 # Load API token from configuration file
 def load_token():
@@ -62,8 +65,7 @@ def save_data():
     if not vorname or not nachname:
         print("Vorname und Nachname müssen angegeben werden.")
         return
-
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now().strftime("%Y_%m_%d")
     filename = f"{vorname}_{nachname}_{timestamp}.json"
     filepath = os.path.join(default_directory, filename)
     
@@ -153,7 +155,7 @@ def collect_input_for_diagnosis():
         # chatgpt_reply = response['choices'][0]['text'].strip()
         # dummy text 
         # TODO DELETE after real use of chatgpd token
-        chatgpt_reply = "Arztbrief mit Diagnose. BLABLABLA"
+        chatgpt_reply = "Arztbrief mit Diagnose. BLABLABLA BLBABABABABABABABA"
         chatgpt_output.delete("1.0", tk.END)
         chatgpt_output.insert("1.0", chatgpt_reply)
 
@@ -190,28 +192,48 @@ root.title("Patienteninformation")
 config_data = load_config()
 default_directory = config_data.get('default_directory', os.path.expanduser("~/Documents"))
 
-# Textbox für Arztbrief
-arztbrief_box = tk.Text(root, height=5, width=80)
-arztbrief_box.grid(row=0, column=0, columnspan=2)
+# Textbox für Arztbrief mit Scrollbar
+arztbrief_frame = tk.Frame(root)
+arztbrief_frame.grid(row=0, column=0, columnspan=2)
+arztbrief_box = tk.Text(arztbrief_frame, height=5, width=80)
+arztbrief_box.pack(side="left", fill="y")
+arztbrief_scroll = tk.Scrollbar(arztbrief_frame, command=arztbrief_box.yview)
+arztbrief_scroll.pack(side="right", fill="y")
+arztbrief_box.config(yscrollcommand=arztbrief_scroll.set)
 arztbrief_box.insert("1.0", "Schreibe einen Arztbrief mit den folgenden Diagnose Notizen")
 
-# Textbox für Diagnose mit grauem Platzhaltertext
-diagnose_box = tk.Text(root, height=10, width=80, fg="grey")
-diagnose_box.grid(row=1, column=0, columnspan=2)
+# Textbox für Diagnose mit Scrollbar und grauem Platzhaltertext
+diagnose_frame = tk.Frame(root)
+diagnose_frame.grid(row=1, column=0, columnspan=2)
+diagnose_box = tk.Text(diagnose_frame, height=10, width=80, fg="grey")
+diagnose_box.pack(side="left", fill="y")
+diagnose_scroll = tk.Scrollbar(diagnose_frame, command=diagnose_box.yview)
+diagnose_scroll.pack(side="right", fill="y")
+diagnose_box.config(yscrollcommand=diagnose_scroll.set)
 diagnose_box.insert("1.0", "Diagnose Notizen hier einfügen")
 diagnose_box.bind("<FocusIn>", lambda event: on_focus_in(event, diagnose_box, "Diagnose Notizen hier einfügen"))
 diagnose_box.bind("<FocusOut>", lambda event: on_focus_out(event, diagnose_box, "Diagnose Notizen hier einfügen"))
 
-# Textbox für ChatGPT-Eingabe mit grauem Platzhaltertext
-chatgpt_input = tk.Text(root, height=5, width=80, fg="grey")
-chatgpt_input.grid(row=2, column=0, columnspan=2)
+# Textbox für ChatGPT-Eingabe mit Scrollbar und grauem Platzhaltertext
+chatgpt_input_frame = tk.Frame(root)
+chatgpt_input_frame.grid(row=2, column=0, columnspan=2)
+chatgpt_input = tk.Text(chatgpt_input_frame, height=5, width=80, fg="grey")
+chatgpt_input.pack(side="left", fill="y")
+chatgpt_input_scroll = tk.Scrollbar(chatgpt_input_frame, command=chatgpt_input.yview)
+chatgpt_input_scroll.pack(side="right", fill="y")
+chatgpt_input.config(yscrollcommand=chatgpt_input_scroll.set)
 chatgpt_input.insert("1.0", "Ausgabe von ChatGPT")
 chatgpt_input.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_input, "Ausgabe von ChatGPT"))
 chatgpt_input.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_input, "Ausgabe von ChatGPT"))
 
-# Textbox für ChatGPT-Ausgabe
-chatgpt_output = tk.Text(root, height=10, width=80)
-chatgpt_output.grid(row=3, column=0, columnspan=2)
+# Textbox für ChatGPT-Ausgabe mit Scrollbar
+chatgpt_output_frame = tk.Frame(root)
+chatgpt_output_frame.grid(row=3, column=0, columnspan=2)
+chatgpt_output = tk.Text(chatgpt_output_frame, height=10, width=80)
+chatgpt_output.pack(side="left", fill="y")
+chatgpt_output_scroll = tk.Scrollbar(chatgpt_output_frame, command=chatgpt_output.yview)
+chatgpt_output_scroll.pack(side="right", fill="y")
+chatgpt_output.config(yscrollcommand=chatgpt_output_scroll.set)
 chatgpt_output.insert("1.0", "Ausgabe von ChatGPT")
 chatgpt_output.bind("<FocusIn>", lambda event: on_focus_in(event, chatgpt_output, "Ausgabe von ChatGPT"))
 chatgpt_output.bind("<FocusOut>", lambda event: on_focus_out(event, chatgpt_output, "Ausgabe von ChatGPT"))
@@ -262,6 +284,15 @@ token_label = tk.Label(root, text="API-Token")
 token_label.grid(row=10, column=0)
 token_entry = tk.Entry(root)
 token_entry.grid(row=10, column=1)
+
+# Token-Feld initialisieren
+api_token = load_token()
+if api_token:
+    token_entry.insert(0, "API Token verfügbar")
+    token_entry.config(fg="grey")
+else:
+    token_entry.config(fg="black")
+
 save_token_button = tk.Button(root, text="API-Token speichern", command=save_token)
 save_token_button.grid(row=10, column=2)
 
