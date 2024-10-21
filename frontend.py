@@ -144,18 +144,18 @@ def collect_input_for_diagnosis():
 
     try:
         # Anfrage an die GPT API senden (neue Schnittstelle)
-        # response = openai.completions.create(
-        #     model="gpt-3.5-turbo-0125",  # Verwende das gewünschte Modell
-        #     prompt=input_text,
-        #     max_tokens=1000,
-        #     temperature=0.7
-        # )
-        
+        completion = openai.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {
+                    "role": "user",
+                    "content": input_text
+                }
+            ]
+        )        
         # ChatGPT-Antwort anzeigen
-        # chatgpt_reply = response['choices'][0]['text'].strip()
-        # dummy text 
-        # TODO DELETE after real use of chatgpd token
-        chatgpt_reply = "Arztbrief mit Diagnose. BLABLABLA BLBABABABABABABABA"
+        chatgpt_reply = completion.choices[0].message.content
         chatgpt_output.delete("1.0", tk.END)
         chatgpt_output.insert("1.0", chatgpt_reply)
 
