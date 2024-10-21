@@ -1,8 +1,8 @@
 This repo is an idea to semi automate doctor's letter using chatgpd.
 
-The user can insert patient information and notes and his api key.
-This infomations enables the tool to communicate with ChatGPD and ask for a doctors letter.
-The generated doctors letter will also saved as a word file since this is most likely the commonly used format.
+The user can insert patient information and notes and his api key.\
+This infomations enables the tool to communicate with ChatGPD and ask for a doctors letter.\
+The generated doctors letter will also saved as a word file since this is most likely the commonly used format.\
 
 Everything is written in german, feel free to use chatgpd to translate it to english.
 
@@ -11,14 +11,20 @@ Limitation
 - some general information about the patient and the doctor are still missing
 
 
-installation
-install python3
-install python packages on windows:
+installation\
+install python3\
+install python packages on windows:\
+```
 py -m pip install openai
 py -m pip install python-docx 
-install python packages on linux:
+```
+install python packages on linux:\
+```
 pip install openai
 pip install python-docx 
+```
 
-start tool
+start tool\
+```
 python3 frontend.py
+```
