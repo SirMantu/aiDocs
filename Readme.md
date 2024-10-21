@@ -1,13 +1,13 @@
 Purpose
 =======
 
-This repo is an idea to semi automate doctor's letter using chatgpd.
+This repo is an idea to semi automate doctor's letter using ChatGPT.
 
 The user can insert patient information and notes and his api key.\
-This infomations enables the tool to communicate with ChatGPD and ask for a doctors letter.\
+This infomations enables the tool to communicate with ChatGPT and ask for a doctors letter.\
 The generated doctors letter will also saved as a word file since this is most likely the commonly used format.
 
-Everything is written in german, feel free to use chatgpd to translate it to english.
+Everything is written in german, feel free to use ChatGPT to translate it to english.
 
 Limitation
 ==========
